@@ -1,29 +1,15 @@
-# conversor
+# Conversor
 
-## Project setup
-```
-npm install
-```
+Converts numbers to words in Portuguese and English, with optional currency formatting.
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+## Usage
 
-### Compiles and minifies for production
-```
-npm run build
-```
+Open `index.html` directly in any browser. No build step or dependencies required.
 
-### Run your tests
-```
-npm run test
-```
+## Features
 
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+- **Number to words** in Portuguese (PT) and English (EN)
+- **Currency mode** — formats the input as a masked currency value and appends the correct currency word to the output
+- **Currency symbol selector** — choose between R$, $, € and £ (each with the correct singular/plural in both languages)
+- **Uppercase toggle** — converts the output to uppercase
+- **Copy button** — copies the result to the clipboard

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversor</title>
+  <style>
+    body {
+      margin: 0 auto;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .conversor {
+      width: 100%;
+      height: 100vh;
+      background-color: #dadada;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    input[type="text"] {
+      height: 65px;
+      border-radius: 5px;
+      text-align: center;
+      border: 0;
+      margin-bottom: 30px;
+      font-size: 3.5rem;
+      background-color: #dadada;
+      color: #727272;
+    }
+
+    #extenso {
+      font-size: 2rem;
+      text-align: center;
+      width: 80%;
+      margin-bottom: 30px;
+    }
+
+    button {
+      height: 35px;
+      cursor: pointer;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .lang-toggle {
+      display: flex;
+      gap: 4px;
+    }
+
+    .lang-btn {
+      padding: 4px 14px;
+      border: 1px solid #aaa;
+      background: #eee;
+      border-radius: 3px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: #2196F3;
+      color: white;
+      border-color: #2196F3;
+    }
+
+    .checks {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .label {
+      display: block;
+      position: relative;
+      padding-left: 35px;
+      cursor: pointer;
+      font-size: 22px;
+      user-select: none;
+    }
+
+    .label input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      height: 0;
+      width: 0;
+    }
+
+    .checkmark {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 25px;
+      width: 25px;
+      background-color: #eee;
+    }
+
+    .label:hover input ~ .checkmark {
+      background-color: #ccc;
+    }
+
+    .label input:checked ~ .checkmark {
+      background-color: #2196F3;
+    }
+
+    .checkmark:after {
+      content: "";
+      position: absolute;
+      display: none;
+    }
+
+    .label input:checked ~ .checkmark:after {
+      display: block;
+    }
+
+    .label .checkmark:after {
+      left: 9px;
+      top: 5px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 3px 3px 0;
+      transform: rotate(45deg);
+    }
+
+    #currency-select {
+      font-size: 18px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #aaa;
+      background: #eee;
+      cursor: pointer;
+    }
+
+    #currency-select.hidden {
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="conversor">
+    <div class="controls">
+      <div class="lang-toggle">
+        <button class="lang-btn active" onclick="setLang('pt')">PT</button>
+        <button class="lang-btn" onclick="setLang('en')">EN</button>
+      </div>
+      <div class="checks">
+        <label class="label">
+          <span id="label-moeda">Moeda</span>
+          <input type="checkbox" id="moeda" checked />
+          <span class="checkmark"></span>
+        </label>
+        <select id="currency-select">
+          <option value="R$">R$</option>
+          <option value="$">$</option>
+          <option value="€">€</option>
+          <option value="£">£</option>
+        </select>
+        <label class="label">
+          <span id="label-maiusculas">Maiúsculas</span>
+          <input type="checkbox" id="maiusculas" />
+          <span class="checkmark"></span>
+        </label>
+      </div>
+    </div>
+
+    <input type="text" id="numero" placeholder="Digite o número" />
+    <span id="extenso"></span>
+    <button id="btn-copiar" onclick="copiar()">COPIAR</button>
+  </div>
+
+  <script>
+    // --- Elements ---
+    const inputEl       = document.getElementById('numero');
+    const moedaEl       = document.getElementById('moeda');
+    const maiusculasEl  = document.getElementById('maiusculas');
+    const extensoEl     = document.getElementById('extenso');
+    const currencyEl    = document.getElementById('currency-select');
+    const labelMoeda    = document.getElementById('label-moeda');
+    const labelMaiusc   = document.getElementById('label-maiusculas');
+    const btnCopiar     = document.getElementById('btn-copiar');
+    const langBtns      = document.querySelectorAll('.lang-btn');
+
+    // --- State ---
+    let rawDigits = '';
+    let lang = 'pt';
+
+    // --- i18n ---
+    const i18n = {
+      pt: { moeda: 'Moeda', maiusculas: 'Maiúsculas', copiar: 'COPIAR', placeholder: 'Digite o número' },
+      en: { moeda: 'Currency', maiusculas: 'Uppercase', copiar: 'COPY', placeholder: 'Enter the number' },
+    };
+
+    // --- Currency names ---
+    const currencyNames = {
+      pt: {
+        'R$': { singular: 'real',   plural: 'reais',   cSingular: 'centavo', cPlural: 'centavos' },
+        '$':  { singular: 'dólar',  plural: 'dólares', cSingular: 'centavo', cPlural: 'centavos' },
+        '€':  { singular: 'euro',   plural: 'euros',   cSingular: 'centavo', cPlural: 'centavos' },
+        '£':  { singular: 'libra',  plural: 'libras',  cSingular: 'penny',   cPlural: 'pence'    },
+      },
+      en: {
+        'R$': { singular: 'real',   plural: 'reais',   cSingular: 'cent',  cPlural: 'cents' },
+        '$':  { singular: 'dollar', plural: 'dollars', cSingular: 'cent',  cPlural: 'cents' },
+        '€':  { singular: 'euro',   plural: 'euros',   cSingular: 'cent',  cPlural: 'cents' },
+        '£':  { singular: 'pound',  plural: 'pounds',  cSingular: 'penny', cPlural: 'pence' },
+      },
+    };
+
+    // --- Init ---
+    inputEl.focus();
+
+    inputEl.addEventListener('input', () => {
+      rawDigits = inputEl.value.replace(/\D/g, '');
+      update();
+    });
+
+    moedaEl.addEventListener('change', () => {
+      currencyEl.classList.toggle('hidden', !moedaEl.checked);
+      update();
+    });
+
+    maiusculasEl.addEventListener('change', update);
+    currencyEl.addEventListener('change', update);
+
+    function setLang(l) {
+      lang = l;
+      document.documentElement.lang = l === 'pt' ? 'pt-BR' : 'en';
+      langBtns.forEach(b => b.classList.toggle('active', b.textContent === l.toUpperCase()));
+      const t = i18n[l];
+      labelMoeda.textContent   = t.moeda;
+      labelMaiusc.textContent  = t.maiusculas;
+      btnCopiar.textContent    = t.copiar;
+      inputEl.placeholder      = t.placeholder;
+      update();
+    }
+
+    function update() {
+      const moeda     = moedaEl.checked;
+      const maiusc    = maiusculasEl.checked;
+      const symbol    = currencyEl.value;
+
+      inputEl.value = formatInput(rawDigits, moeda, symbol);
+
+      let resultado = '';
+      if (rawDigits) {
+        resultado = lang === 'pt'
+          ? convertPT(rawDigits, moeda, symbol)
+          : convertEN(rawDigits, moeda, symbol);
+      }
+      extensoEl.textContent = maiusc ? resultado.toUpperCase() : resultado;
+    }
+
+    // --- Input formatting ---
+    function formatInput(digits, moeda, symbol) {
+      if (!digits) return '';
+      if (moeda) {
+        const padded  = digits.padStart(3, '0');
+        const intPart = padded.slice(0, -2).replace(/^0+/, '') || '0';
+        const decPart = padded.slice(-2);
+        return symbol + ' ' + intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + decPart;
+      } else {
+        const clean = digits.replace(/^0+/, '') || '0';
+        return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      }
+    }
+
+    // --- Portuguese conversion ---
+    function convertPT(digits, moeda, symbol) {
+      const currency = currencyNames.pt[symbol];
+      const decimais = ['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+      const dezenas  = ['dez','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+      const centenas = ['cem','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
+      const milhares = ['mil','milhão','bilhão','trilhão','quadrilhão','quintilhão','sextilhão','setilhão','octilhão','nonilhão','decilhão','undecilhão','dodecilhão','tredecilhão','quatrodecilhão','quindecilhão','sedecilhão','septendecilhão','octencilhão','nonencilhão'];
+      const extensos = [decimais, dezenas, centenas, milhares];
+
+      let numeroStr;
+      if (moeda) {
+        const padded  = digits.padStart(3, '0');
+        const intPart = padded.slice(0, -2).replace(/^0+/, '') || '0';
+        const decPart = padded.slice(-2);
+        numeroStr = intPart + ',' + decPart;
+      } else {
+        numeroStr = digits.replace(/^0+/, '') || '0';
+      }
+
+      let arrayNumeros, v, i;
+      const numero = numeroStr.split(',');
+      const e = ' e ';
+
+      for (var tamanhoNumero = numero.length - 1, l, posicaoNumero = -1, resultado = [], s = [], t = ''; ++posicaoNumero <= tamanhoNumero; s = []) {
+        posicaoNumero && (numero[posicaoNumero] = (('.' + numero[posicaoNumero]) * 1).toFixed(2).slice(2));
+
+        if (!(arrayNumeros = (v = numero[posicaoNumero]).slice((l = v.length) % 3).match(/\d{3}/g), v = l % 3 ? [v.slice(0, l % 3)] : [], v = arrayNumeros ? v.concat(arrayNumeros) : v).length) continue;
+
+        for (arrayNumeros = -1, l = v.length; ++arrayNumeros < l; t = '') {
+          if (!(i = v[arrayNumeros] * 1)) continue;
+          i % 100 < 20 && (t += extensos[0][i % 100]) ||
+          i % 100 + 1  && (t += extensos[1][(i % 100 / 10 >> 0) - 1] + (i % 10 ? e + extensos[0][i % 10] : ''));
+          s.push((i < 100 ? t : !(i % 100) ? extensos[2][i == 100 ? 0 : i / 100 >> 0] : (extensos[2][i / 100 >> 0] + e + t)) +
+            ((t = l - arrayNumeros - 2) > -1 ? ' ' + (i > 1 && t > 0 ? extensos[3][t].replace('ão', 'ões') : extensos[3][t]) : ''));
+        }
+
+        arrayNumeros = (s.length > 1 ? (arrayNumeros = s.pop(), s.join(' ') + e + arrayNumeros) : s.join('') || ((!posicaoNumero && (numero[posicaoNumero + 1] * 1 > 0) || resultado.length) ? '' : extensos[0][0]));
+        arrayNumeros && resultado.push(arrayNumeros + (moeda ? (' ' + (v.join('') * 1 > 1 ? posicaoNumero ? currency.cPlural : currency.plural : posicaoNumero ? currency.cSingular : currency.singular)) : ''));
+      }
+
+      return resultado.join(e);
+    }
+
+    // --- English conversion ---
+    function convertEN(digits, moeda, symbol) {
+      const currency = currencyNames.en[symbol];
+      const ones  = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+      const tens  = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+      const scales = ['','thousand','million','billion','trillion','quadrillion','quintillion','sextillion','septillion','octillion','nonillion','decillion'];
+
+      function convert(n) {
+        if (n === 0) return '';
+        if (n < 20)  return ones[n];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? '-' + ones[n % 10] : '');
+        if (n < 1000) {
+          const rem = n % 100;
+          return ones[Math.floor(n / 100)] + ' hundred' + (rem ? ' and ' + convert(rem) : '');
+        }
+        let scaleIdx = 0, temp = n;
+        while (temp >= 1000) { temp = Math.floor(temp / 1000); scaleIdx++; }
+        const high = Math.floor(n / Math.pow(1000, scaleIdx));
+        const low  = n % Math.pow(1000, scaleIdx);
+        return convert(high) + ' ' + scales[scaleIdx] + (low ? (low < 100 ? ' and ' : ' ') + convert(low) : '');
+      }
+
+      let intVal, centVal;
+      if (moeda) {
+        const padded = digits.padStart(3, '0');
+        intVal  = parseInt(padded.slice(0, -2), 10);
+        centVal = parseInt(padded.slice(-2), 10);
+      } else {
+        intVal  = parseInt(digits, 10) || 0;
+        centVal = 0;
+      }
+
+      if (!moeda) {
+        return intVal === 0 ? 'zero' : (convert(intVal) || 'zero');
+      }
+
+      const parts = [];
+      if (intVal  > 0) parts.push((convert(intVal)  || 'zero') + ' ' + (intVal  === 1 ? currency.singular : currency.plural));
+      if (centVal > 0) parts.push((convert(centVal) || 'zero') + ' ' + (centVal === 1 ? currency.cSingular : currency.cPlural));
+      if (!parts.length) return 'zero ' + currency.plural;
+      return parts.join(' and ');
+    }
+
+    // --- Copy ---
+    function copiar() {
+      const text = extensoEl.textContent;
+      if (!text) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    }
+  </script>
+</body>
+</html>
